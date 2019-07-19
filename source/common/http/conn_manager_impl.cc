@@ -1229,7 +1229,7 @@ void ConnectionManagerImpl::ActiveStream::sendLocalReply(
   }
   stream_info_.setResponseCodeDetails(details);
 
-  this->connection_manager_.config_.sendLocalReplyConfig()->rewriteStatusCodeIfMatches(code);
+  this->connection_manager_.config_.sendLocalReplyConfig()->rewriteStatusCodeIfMatches(code, body);
   //here make some function which change body and status code
   Utility::sendLocalReply(
       is_grpc_request,
