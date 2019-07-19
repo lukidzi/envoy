@@ -25,7 +25,7 @@ import "gogoproto/gogo.proto";
 // [#protodoc-title: HTTP connection manager]
 // HTTP connection manager :ref:`configuration overview <config_http_conn_man>`.
 
-// [#comment:next free field: 33]
+// [#comment:next free field: 34]
 message HttpConnectionManager {
   enum CodecType {
     option (gogoproto.goproto_enum_prefix) = false;
@@ -424,6 +424,28 @@ message HttpConnectionManager {
   // Note that Envoy does not perform
   // `case normalization <https://tools.ietf.org/html/rfc3986#section-6.2.2.1>`
   google.protobuf.BoolValue normalize_path = 30;
+
+  message SendLocalReplyConfig {
+
+    message ReplyConfig {
+      message Matcher {
+         
+        uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
+        string body = 2;
+      };
+
+      message Rewriter {
+        uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
+      };
+
+      Matcher match = 1;
+      Rewriter rewriter = 2;
+    };
+    repeated ReplyConfig config = 1;
+    google.protobuf.Struct json_format = 2;
+  };
+
+  SendLocalReplyConfig send_local_reply_config = 33;
 }
 
 message Rds {

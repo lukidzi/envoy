@@ -1228,6 +1228,9 @@ void ConnectionManagerImpl::ActiveStream::sendLocalReply(
     createFilterChain();
   }
   stream_info_.setResponseCodeDetails(details);
+
+  this->connection_manager_.config_.sendLocalReplyConfig()->rewriteStatusCodeIfMatches(code);
+  //here make some function which change body and status code
   Utility::sendLocalReply(
       is_grpc_request,
       [this, modify_headers](HeaderMapPtr&& headers, bool end_stream) -> void {

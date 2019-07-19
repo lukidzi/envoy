@@ -120,6 +120,7 @@ envoy_cc_library(
     hdrs = ["conn_manager_config.h"],
     deps = [
         ":date_provider_lib",
+        ":utility_lib",
         "//include/envoy/config:config_provider_interface",
         "//include/envoy/http:filter_interface",
         "//include/envoy/router:rds_interface",
@@ -306,6 +307,7 @@ envoy_cc_library(
         "//source/common/protobuf:utility_lib",
         "@envoy_api//envoy/api/v2/core:http_uri_cc",
         "@envoy_api//envoy/api/v2/core:protocol_cc",
+        # "@envoy_api//envoy/config/filter/network/http_connection_manager/v2:http_connection_manager_cc",
     ],
 )
 

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <list>
 #include <vector>
 
 #include "envoy/config/filter/network/http_connection_manager/v2/http_connection_manager.pb.validate.h"
@@ -330,6 +331,16 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
           std::make_pair(name, FilterConfig{std::move(factories), enabled}));
     }
   }
+  std::list<std::pair<Http::Utility::LocalReplyMatcher,  Http::Utility::LocalReplyRewriter>> list_of_pair;
+  if(config.send_local_reply_config().config_size() > 0){
+      for(auto& match_rewrite_config : config.send_local_reply_config().config()){
+            std::pair<Http::Utility::LocalReplyMatcher,  Http::Utility::LocalReplyRewriter> pair = std::make_pair(
+                   Http::Utility::LocalReplyMatcher {match_rewrite_config.match().status(), match_rewrite_config.match().body()},
+                   Http::Utility::LocalReplyRewriter {match_rewrite_config.rewriter().status()});
+            list_of_pair.emplace_back(std::move(pair));  
+      }
+   }
+   send_local_reply_config_ = Http::Utility::SendLocalReplyConfigConstPtr(new Http::Utility::SendLocalReplyConfig(list_of_pair));
 }
 
 void HttpConnectionManagerConfig::processFilter(

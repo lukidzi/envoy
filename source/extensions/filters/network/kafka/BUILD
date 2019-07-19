@@ -27,6 +27,7 @@ envoy_cc_library(
     srcs = ["request_codec.cc"],
     hdrs = [
         "request_codec.h",
+        "codec.h",
     ],
     deps = [
         ":abstract_codec_lib",

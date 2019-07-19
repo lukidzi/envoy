@@ -12,6 +12,7 @@
 #include "envoy/http/filter.h"
 #include "envoy/router/route_config_provider_manager.h"
 
+#include "common/http/utility.h"
 #include "common/common/logger.h"
 #include "common/http/conn_manager_impl.h"
 #include "common/json/json_loader.h"
@@ -139,6 +140,7 @@ public:
   const Http::Http1Settings& http1Settings() const override { return http1_settings_; }
   bool shouldNormalizePath() const override { return normalize_path_; }
   std::chrono::milliseconds delayedCloseTimeout() const override { return delayed_close_timeout_; }
+  const Http::Utility::SendLocalReplyConfig* sendLocalReplyConfig() const override { return send_local_reply_config_.get(); }
 
 private:
   enum class CodecType { HTTP1, HTTP2, AUTO };
@@ -182,6 +184,7 @@ private:
   const bool proxy_100_continue_;
   std::chrono::milliseconds delayed_close_timeout_;
   const bool normalize_path_;
+  Http::Utility::SendLocalReplyConfigConstPtr send_local_reply_config_;
 
   // Default idle timeout is 5 minutes if nothing is specified in the HCM config.
   static const uint64_t StreamIdleTimeoutMs = 5 * 60 * 1000;

@@ -12,6 +12,7 @@
 #include "envoy/http/message.h"
 #include "envoy/http/metadata_interface.h"
 #include "envoy/http/query_params.h"
+#include "common/common/enum_to_int.h"
 
 #include "common/json/json_loader.h"
 
@@ -38,6 +39,39 @@ private:
   absl::string_view host_and_port_;
   absl::string_view path_and_query_params_;
 };
+
+struct LocalReplyMatcher {
+    uint32_t status_;
+    std::string message_;
+};
+
+struct LocalReplyRewriter {
+    uint32_t status_;
+};
+
+class SendLocalReplyConfig{
+public:
+    SendLocalReplyConfig(std::list<std::pair<LocalReplyMatcher, LocalReplyRewriter>>& match_rewrite_pair_list)
+     : match_rewrite_pair_list_(match_rewrite_pair_list) {};
+
+     void rewriteStatusCodeIfMatches (Http::Code& code) const{
+        for (auto it = match_rewrite_pair_list_.begin(); it != match_rewrite_pair_list_.end();) {
+            // bool matches = it->first.isMatching(code, body);
+            // if( matches ){
+                code = static_cast<Http::Code>(it->second.status_);
+            //     break;
+            // }
+
+            it++;
+        }
+    }
+   
+private:
+    std::list<std::pair<LocalReplyMatcher, LocalReplyRewriter>> match_rewrite_pair_list_;
+};
+
+using SendLocalReplyConfigConstPtr = std::unique_ptr<const SendLocalReplyConfig>;
+
 
 class PercentEncoding {
 public:
