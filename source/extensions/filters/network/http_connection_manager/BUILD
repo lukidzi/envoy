@@ -12,18 +12,6 @@ load(
 
 envoy_package()
 
-# envoy_cc_library(
-#     name = "local_reply_lib",
-#     srcs = ["local_reply.cc"],
-#     hdrs = ["local_reply.h"],
-#     deps = [
-#         "//include/envoy/http:codes_interface",
-#         "//source/common/common:enum_to_int",
-#         "//source/common/common:minimal_logger_lib",
-#         "@envoy_api//envoy/config/filter/network/http_connection_manager/v2:http_connection_manager_cc",
-#     ]
-# )
-
 envoy_cc_library(
     name = "config",
     srcs = ["config.cc"],
@@ -52,6 +40,5 @@ envoy_cc_library(
         "//source/common/router:scoped_rds_lib",
         "//source/extensions/filters/network:well_known_names",
         "//source/extensions/filters/network/common:factory_base_lib",
-        # "//source/extensions/filters/network/http_connection_manager:local_reply_lib",
     ],
 )
