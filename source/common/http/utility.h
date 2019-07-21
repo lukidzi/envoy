@@ -42,21 +42,18 @@ private:
 
 struct LocalReplyMatcher {
 
-  bool isMatching(Http::Code status, absl::string_view body) const{
+  bool isMatching(Http::Code status, absl::string_view& body) const{
         if(status_ != 0 && status_ != enumToInt(status)){
             return false;
         }
-        if(message_.empty() == true){
-            return true;
-        }
-        if(message_.empty() == false && body.find(message_) != absl::string_view::npos){
+        if(std::regex_match(body.begin(), body.end(), body_pattern_)){
             return true;
         }
 
         return false;
     };
     uint32_t status_;
-    std::string message_;
+    std::regex body_pattern_;
 };
 
 struct LocalReplyRewriter {
@@ -68,7 +65,7 @@ public:
     SendLocalReplyConfig(std::list<std::pair<LocalReplyMatcher, LocalReplyRewriter>>& match_rewrite_pair_list)
      : match_rewrite_pair_list_(match_rewrite_pair_list) {};
 
-     void rewriteStatusCodeIfMatches(Http::Code& code, absl::string_view body) const{
+     void rewriteStatusCodeIfMatches(Http::Code& code, absl::string_view& body) const{
         for (auto it = match_rewrite_pair_list_.begin(); it != match_rewrite_pair_list_.end();) {
             bool matches = it->first.isMatching(code, body);
             if( matches ){

@@ -431,7 +431,7 @@ message HttpConnectionManager {
       message Matcher {
          
         uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
-        string body = 2;
+        string body_pattern = 2;
       };
 
       message Rewriter {

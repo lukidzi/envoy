@@ -12,6 +12,7 @@
 
 #include "common/access_log/access_log_impl.h"
 #include "common/common/fmt.h"
+#include "common/common/utility.h"
 #include "common/config/filter_json.h"
 #include "common/config/utility.h"
 #include "common/http/conn_manager_utility.h"
@@ -331,16 +332,22 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
           std::make_pair(name, FilterConfig{std::move(factories), enabled}));
     }
   }
-  std::list<std::pair<Http::Utility::LocalReplyMatcher,  Http::Utility::LocalReplyRewriter>> list_of_pair;
-  if(config.send_local_reply_config().config_size() > 0){
-      for(auto& match_rewrite_config : config.send_local_reply_config().config()){
-            std::pair<Http::Utility::LocalReplyMatcher,  Http::Utility::LocalReplyRewriter> pair = std::make_pair(
-                   Http::Utility::LocalReplyMatcher {match_rewrite_config.match().status(), match_rewrite_config.match().body()},
-                   Http::Utility::LocalReplyRewriter {match_rewrite_config.rewriter().status()});
-            list_of_pair.emplace_back(std::move(pair));  
-      }
-   }
-   send_local_reply_config_ = Http::Utility::SendLocalReplyConfigConstPtr(new Http::Utility::SendLocalReplyConfig(list_of_pair));
+
+  if(config.has_send_local_reply_config()){
+    std::list<std::pair<Http::Utility::LocalReplyMatcher,  Http::Utility::LocalReplyRewriter>> list_of_pair;
+    if(config.send_local_reply_config().config_size() > 0){
+        for(auto& match_rewrite_config : config.send_local_reply_config().config()){
+              std::pair<Http::Utility::LocalReplyMatcher,  Http::Utility::LocalReplyRewriter> pair = std::make_pair(
+                    Http::Utility::LocalReplyMatcher {
+                      match_rewrite_config.match().status(), 
+                      RegexUtil::parseRegex(match_rewrite_config.match().body_pattern())
+                    },
+                    Http::Utility::LocalReplyRewriter {match_rewrite_config.rewriter().status()});
+              list_of_pair.emplace_back(std::move(pair));  
+        }
+    }
+    send_local_reply_config_ = Http::Utility::SendLocalReplyConfigConstPtr(new Http::Utility::SendLocalReplyConfig(list_of_pair));
+  }
 }
 
 void HttpConnectionManagerConfig::processFilter(
