@@ -425,16 +425,15 @@ message HttpConnectionManager {
   // `case normalization <https://tools.ietf.org/html/rfc3986#section-6.2.2.1>`
   google.protobuf.BoolValue normalize_path = 30;
 
-
-  // Configuration of local reply send by envoy. Allows to define custom rules 
-  // which maps response returned by envoy to different one. Currently mapping of 
+  // Configuration of local reply send by envoy. Allows to define custom rules
+  // which maps response returned by envoy to different one. Currently mapping of
   // status code is implemented.
   message SendLocalReplyConfig {
 
     // Holds pair of match and rewrite configuration.
     message ReplyConfig {
 
-      // Configuration which allows to define custom rules for matching local response. 
+      // Configuration which allows to define custom rules for matching local response.
       message Matcher {
         // Definition of status code which will be mapped.
         uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
@@ -447,7 +446,7 @@ message HttpConnectionManager {
         // Definition of status code to which matched will be mapped.
         uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
       };
-      
+
       Matcher match = 1;
       Rewriter rewriter = 2;
     };

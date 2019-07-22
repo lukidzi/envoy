@@ -4,9 +4,9 @@
 #include "envoy/http/filter.h"
 #include "envoy/router/rds.h"
 #include "envoy/stats/scope.h"
-#include "common/http/utility.h"
 
 #include "common/http/date_provider.h"
+#include "common/http/utility.h"
 #include "common/network/utility.h"
 
 namespace Envoy {
@@ -165,50 +165,6 @@ public:
     return Network::Utility::isInternalAddress(address);
   }
 };
-
-// struct LocalReplyMatcher {
-
-//     bool isMatching(Http::Code status, absl::string_view body) const{
-//         if(status_ != 0 && status_ != enumToInt(status)){
-//             return false;
-//         }
-//         if(message_.empty() == true){
-//             return true;
-//         }
-//         if(message_.empty() == false && body.find(message_) != absl::string_view::npos){
-//             return true;
-//         }
-
-//         return false;
-//     };
-
-//     uint32_t status_;
-//     std::string message_;
-// };
-
-// struct LocalReplyRewriter {
-//     uint32_t status_;
-// };
-
-// class SendLocalReplyConfig{
-// public:
-//     SendLocalReplyConfig (const envoy::config::filter::network::http_connection_manager::v2::HttpConnectionManager::SendLocalReplyConfig& config);
-//     void rewriteStatusCodeIfMatches (Http::Code& code, absl::string_view& body) const{
-//         for (auto it = match_rewrite_pair_list_.begin(); it != match_rewrite_pair_list_.end();) {
-//             bool matches = it->first.isMatching(code, body);
-//             if( matches ){
-//                 code = static_cast<Http::Code>(it->second.status_);
-//                 break;
-//             }
-//             it++;
-//         }
-//     }
-
-// private:
-//     std::list<std::pair<LocalReplyMatcher, LocalReplyRewriter>> match_rewrite_pair_list_;
-// };
-
-// using SendLocalReplyConfigConstPtr = std::unique_ptr<const SendLocalReplyConfig>;
 
 /**
  * Abstract configuration for the connection manager.
@@ -404,7 +360,7 @@ public:
   virtual bool shouldNormalizePath() const PURE;
 
   /**
-   * @return Http::Utility::SendLocalReplyConfig* configuration of custom reply from  
+   * @return Http::Utility::SendLocalReplyConfig* configuration of custom reply from
    * local configuration.
    */
   virtual const Http::Utility::SendLocalReplyConfig* sendLocalReplyConfig() const PURE;
