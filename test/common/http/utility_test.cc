@@ -532,6 +532,72 @@ TEST(HttpUtility, SendLocalReplyHeadRequest) {
                           absl::nullopt, true);
 }
 
+TEST(HttpUtility, SendLocalReplyWithMappingOfAll503To504) {
+  MockStreamDecoderFilterCallbacks callbacks;
+  std::list<std::pair<Utility::LocalReplyMatcher, Utility::LocalReplyRewriter>> list_of_pair(
+      {std::make_pair(Utility::LocalReplyMatcher{503, ""}, Utility::LocalReplyRewriter{504})});
+  Utility::SendLocalReplyConfigConstPtr send_local_reply_config =
+      Utility::SendLocalReplyConfigConstPtr(new Utility::SendLocalReplyConfig(list_of_pair));
+
+  EXPECT_CALL(callbacks, encodeHeaders_(_, true))
+      .Times(2)
+      .WillOnce(Invoke([&](const HeaderMap& headers, bool) -> void {
+        EXPECT_EQ(headers.Status()->value().getStringView(), "504");
+      }))
+      .WillOnce(Invoke([&](const HeaderMap& headers, bool) -> void {
+        EXPECT_EQ(headers.Status()->value().getStringView(), "504");
+        EXPECT_EQ(headers.ContentLength()->value().getStringView(),
+                  fmt::format("{}", strlen("connection failure")));
+      }));
+  Utility::sendLocalReply(false, callbacks, false, Http::Code::ServiceUnavailable, "",
+                          absl::nullopt, true, send_local_reply_config.get());
+  Utility::sendLocalReply(false, callbacks, false, Http::Code::ServiceUnavailable,
+                          "connection failure", absl::nullopt, true, send_local_reply_config.get());
+}
+
+TEST(HttpUtility, SendLocalReplyWithMappingOf503RequestMatchingPatternTo504) {
+  MockStreamDecoderFilterCallbacks callbacks;
+  std::list<std::pair<Utility::LocalReplyMatcher, Utility::LocalReplyRewriter>> list_of_pair(
+      {std::make_pair(Utility::LocalReplyMatcher{503, "^connection failure$"},
+                      Utility::LocalReplyRewriter{504})});
+  Utility::SendLocalReplyConfigConstPtr send_local_reply_config =
+      Utility::SendLocalReplyConfigConstPtr(new Utility::SendLocalReplyConfig(list_of_pair));
+
+  EXPECT_CALL(callbacks, encodeHeaders_(_, true))
+      .Times(2)
+      .WillOnce(Invoke([&](const HeaderMap& headers, bool) -> void {
+        EXPECT_EQ(headers.Status()->value().getStringView(), "500");
+      }))
+      .WillOnce(Invoke([&](const HeaderMap& headers, bool) -> void {
+        EXPECT_EQ(headers.Status()->value().getStringView(), "504");
+      }));
+
+  Utility::sendLocalReply(false, callbacks, false, Http::Code::InternalServerError,
+                          "connection failure", absl::nullopt, true, send_local_reply_config.get());
+  Utility::sendLocalReply(false, callbacks, false, Http::Code::ServiceUnavailable,
+                          "connection failure", absl::nullopt, true, send_local_reply_config.get());
+}
+
+TEST(HttpUtility, SendLocalReplyWithMappingOf503RequestMatchingPatternTo504FromSecondRule) {
+  MockStreamDecoderFilterCallbacks callbacks;
+  std::list<std::pair<Utility::LocalReplyMatcher, Utility::LocalReplyRewriter>> list_of_pair(
+      {std::make_pair(Utility::LocalReplyMatcher{503, "^connection failure$"},
+                      Utility::LocalReplyRewriter{504}),
+       std::make_pair(Utility::LocalReplyMatcher{503, "[1-9]connection failure$"},
+                      Utility::LocalReplyRewriter{505})});
+  Utility::SendLocalReplyConfigConstPtr send_local_reply_config =
+      Utility::SendLocalReplyConfigConstPtr(new Utility::SendLocalReplyConfig(list_of_pair));
+
+  EXPECT_CALL(callbacks, encodeHeaders_(_, true))
+      .WillOnce(Invoke([&](const HeaderMap& headers, bool) -> void {
+        EXPECT_EQ(headers.Status()->value().getStringView(), "505");
+      }));
+
+  Utility::sendLocalReply(false, callbacks, false, Http::Code::ServiceUnavailable,
+                          "1connection failure", absl::nullopt, true,
+                          send_local_reply_config.get());
+}
+
 TEST(HttpUtility, TestExtractHostPathFromUri) {
   absl::string_view host, path;
 

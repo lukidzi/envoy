@@ -44,7 +44,14 @@ private:
  * Structure which holds match configuration from proto file for SendLocalReplyConfig.
  */
 struct LocalReplyMatcher {
-
+  LocalReplyMatcher(const uint32_t status, const std::string& body_pattern) : status_(status) {
+    if (body_pattern.empty()) {
+      should_match_all_response_body_ = true;
+    } else {
+      should_match_all_response_body_ = false;
+      body_pattern_ = RegexUtil::parseRegex(body_pattern);
+    }
+  }
   /**
    * Method check if returned local response is matching given conditions.
    * @param status supplies status code to match.
@@ -55,13 +62,17 @@ struct LocalReplyMatcher {
     if (status_ != 0 && status_ != enumToInt(status)) {
       return false;
     }
-    if (std::regex_match(body.begin(), body.end(), body_pattern_)) {
+    if (should_match_all_response_body_) {
       return true;
     }
-    return false;
+    if (!std::regex_match(body.begin(), body.end(), body_pattern_)) {
+      return false;
+    }
+    return true;
   };
   uint32_t status_;
   std::regex body_pattern_;
+  bool should_match_all_response_body_;
 };
 
 /**
@@ -90,7 +101,7 @@ public:
     if (!match_rewrite_pair_list_.empty()) {
       for (auto it = match_rewrite_pair_list_.begin(); it != match_rewrite_pair_list_.end();) {
         bool matches = it->first.isMatching(code, body);
-        if (matches) {
+        if (matches && it->second.status_ != 0) {
           code = static_cast<Http::Code>(it->second.status_);
           break;
         }

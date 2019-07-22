@@ -340,18 +340,14 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
       for (auto& match_rewrite_config : config.send_local_reply_config().config()) {
         std::pair<Http::Utility::LocalReplyMatcher, Http::Utility::LocalReplyRewriter> pair =
             std::make_pair(
-                Http::Utility::LocalReplyMatcher{
-                    match_rewrite_config.match().status(),
-                    RegexUtil::parseRegex(match_rewrite_config.match().body_pattern())},
-                Http::Utility::LocalReplyRewriter{match_rewrite_config.rewriter().status()});
+                Http::Utility::LocalReplyMatcher{match_rewrite_config.match().status(),
+                                                 match_rewrite_config.match().body_pattern()},
+                Http::Utility::LocalReplyRewriter{match_rewrite_config.rewrite().status()});
         list_of_pair.emplace_back(std::move(pair));
       }
     }
-
     send_local_reply_config_ = Http::Utility::SendLocalReplyConfigConstPtr(
         new Http::Utility::SendLocalReplyConfig(list_of_pair));
-  } else {
-    send_local_reply_config_ = nullptr;
   }
 }
 

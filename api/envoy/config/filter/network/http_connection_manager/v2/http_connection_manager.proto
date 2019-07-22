@@ -427,14 +427,14 @@ message HttpConnectionManager {
 
   // Configuration of local reply send by envoy. Allows to define custom rules
   // which maps response returned by envoy to different one. Currently mapping of
-  // status code is implemented.
+  // status code is implemented also this mapping works only for http calls.
   message SendLocalReplyConfig {
 
     // Holds pair of match and rewrite configuration.
-    message ReplyConfig {
+    message RulesConfig {
 
       // Configuration which allows to define custom rules for matching local response.
-      message Matcher {
+      message Match {
         // Definition of status code which will be mapped.
         uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
         // Definition of regex body pattern to check.
@@ -442,16 +442,16 @@ message HttpConnectionManager {
       };
 
       // Configuration which allows to definer for which should be mapped matched response.
-      message Rewriter {
+      message Rewrite {
         // Definition of status code to which matched will be mapped.
         uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
       };
 
-      Matcher match = 1;
-      Rewriter rewriter = 2;
+      Match match = 1;
+      Rewrite rewrite = 2;
     };
     // This field holds list of custom match - rewrite pairs.
-    repeated ReplyConfig config = 1;
+    repeated RulesConfig config = 1;
   };
 
   SendLocalReplyConfig send_local_reply_config = 33;
