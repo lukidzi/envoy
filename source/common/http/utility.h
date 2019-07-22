@@ -40,33 +40,53 @@ private:
   absl::string_view path_and_query_params_;
 };
 
+/**
+ * Structure which holds match configuration from proto file for SendLocalReplyConfig.
+ */
 struct LocalReplyMatcher {
-
-  bool isMatching(Http::Code status, absl::string_view& body) const{
+  
+  /**
+   * Method check if returned local response is matching given conditions.
+   * @param status supplies status code to match.
+   * @param body supplies response body to match.
+   * @return true if status and body match given conditions. 
+   */ 
+  bool isMatching(Http::Code& status, absl::string_view& body) const{
         if(status_ != 0 && status_ != enumToInt(status)){
             return false;
         }
         if(std::regex_match(body.begin(), body.end(), body_pattern_)){
             return true;
         }
-
         return false;
     };
     uint32_t status_;
     std::regex body_pattern_;
 };
 
+/**
+ * Structure which holds rewriter configuration from proto file for SendLocalReplyConfig.
+ */
 struct LocalReplyRewriter {
     uint32_t status_;
 };
 
+/**
+ * Holds configuration from proto file for SendLocalReplyConfig.
+ */
 class SendLocalReplyConfig{
 public:
     SendLocalReplyConfig(std::list<std::pair<LocalReplyMatcher, LocalReplyRewriter>>& match_rewrite_pair_list)
      : match_rewrite_pair_list_(match_rewrite_pair_list) {};
 
-     void rewriteStatusCodeIfMatches(Http::Code& code, absl::string_view& body) const{
-       if(!match_rewrite_pair_list_.empty()){
+  /**
+   * Method check if given code and body matches configured rules and replace status code if matches.
+   * It runs until first match occuress and if no match then just returns from function.
+   * @param status supplies status code to match.
+   * @param body supplies response body to match.
+   */ 
+    void rewriteStatusCodeIfMatches(Http::Code& code, absl::string_view& body) const{
+      if(!match_rewrite_pair_list_.empty()){
           for (auto it = match_rewrite_pair_list_.begin(); it != match_rewrite_pair_list_.end();) {
               bool matches = it->first.isMatching(code, body);
               if( matches ){
@@ -80,11 +100,9 @@ public:
    
 private:
     std::list<std::pair<LocalReplyMatcher, LocalReplyRewriter>> match_rewrite_pair_list_;
-    // std::unordered_map<std::string, std::string> json_format_;
 };
 
 using SendLocalReplyConfigConstPtr = std::unique_ptr<const SendLocalReplyConfig>;
-
 
 class PercentEncoding {
 public:
