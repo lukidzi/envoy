@@ -66,19 +66,21 @@ public:
      : match_rewrite_pair_list_(match_rewrite_pair_list) {};
 
      void rewriteStatusCodeIfMatches(Http::Code& code, absl::string_view& body) const{
-        for (auto it = match_rewrite_pair_list_.begin(); it != match_rewrite_pair_list_.end();) {
-            bool matches = it->first.isMatching(code, body);
-            if( matches ){
-                code = static_cast<Http::Code>(it->second.status_);
-                break;
-            }
-
-            it++;
-        }
+       if(!match_rewrite_pair_list_.empty()){
+          for (auto it = match_rewrite_pair_list_.begin(); it != match_rewrite_pair_list_.end();) {
+              bool matches = it->first.isMatching(code, body);
+              if( matches ){
+                  code = static_cast<Http::Code>(it->second.status_);
+                  break;
+              }
+              it++;
+          }
+       }
     }
    
 private:
     std::list<std::pair<LocalReplyMatcher, LocalReplyRewriter>> match_rewrite_pair_list_;
+    // std::unordered_map<std::string, std::string> json_format_;
 };
 
 using SendLocalReplyConfigConstPtr = std::unique_ptr<const SendLocalReplyConfig>;
@@ -236,7 +238,7 @@ Http1Settings parseHttp1Settings(const envoy::api::v2::core::Http1ProtocolOption
 void sendLocalReply(bool is_grpc, StreamDecoderFilterCallbacks& callbacks, const bool& is_reset,
                     Code response_code, absl::string_view body_text,
                     const absl::optional<Grpc::Status::GrpcStatus> grpc_status,
-                    bool is_head_request);
+                    bool is_head_request, const SendLocalReplyConfig* send_local_reply_config = nullptr);
 
 /**
  * Create a locally generated response using the provided lambdas.
@@ -256,7 +258,7 @@ void sendLocalReply(bool is_grpc,
                     std::function<void(Buffer::Instance& data, bool end_stream)> encode_data,
                     const bool& is_reset, Code response_code, absl::string_view body_text,
                     const absl::optional<Grpc::Status::GrpcStatus> grpc_status,
-                    bool is_head_request = false);
+                    bool is_head_request = false, const SendLocalReplyConfig* send_local_reply_config = nullptr);
 
 struct GetLastAddressFromXffInfo {
   // Last valid address pulled from the XFF header.

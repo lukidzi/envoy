@@ -267,7 +267,7 @@ Utility::parseHttp1Settings(const envoy::api::v2::core::Http1ProtocolOptions& co
 void Utility::sendLocalReply(bool is_grpc, StreamDecoderFilterCallbacks& callbacks,
                              const bool& is_reset, Code response_code, absl::string_view body_text,
                              const absl::optional<Grpc::Status::GrpcStatus> grpc_status,
-                             bool is_head_request) {
+                             bool is_head_request, const SendLocalReplyConfig* send_local_reply_config) {
   sendLocalReply(
       is_grpc,
       [&](HeaderMapPtr&& headers, bool end_stream) -> void {
@@ -276,15 +276,17 @@ void Utility::sendLocalReply(bool is_grpc, StreamDecoderFilterCallbacks& callbac
       [&](Buffer::Instance& data, bool end_stream) -> void {
         callbacks.encodeData(data, end_stream);
       },
-      is_reset, response_code, body_text, grpc_status, is_head_request);
+      is_reset, response_code, body_text, grpc_status,
+      is_head_request, send_local_reply_config);
 }
 
 void Utility::sendLocalReply(
     bool is_grpc, std::function<void(HeaderMapPtr&& headers, bool end_stream)> encode_headers,
     std::function<void(Buffer::Instance& data, bool end_stream)> encode_data, const bool& is_reset,
     Code response_code, absl::string_view body_text,
-    const absl::optional<Grpc::Status::GrpcStatus> grpc_status, bool is_head_request) {
-  // encode_headers() may reset the stream, so the stream must not be reset before calling it.
+    const absl::optional<Grpc::Status::GrpcStatus> grpc_status, bool is_head_request,
+    const SendLocalReplyConfig* send_local_reply_config) {
+// encode_headers() may reset the stream, so the stream must not be reset before calling it.
   ASSERT(!is_reset);
   // Respond with a gRPC trailers-only response if the request is gRPC
   if (is_grpc) {
@@ -303,8 +305,9 @@ void Utility::sendLocalReply(
     encode_headers(std::move(response_headers), true); // Trailers only response
     return;
   }
-
-  //here match and replace if needed 
+  if(send_local_reply_config != nullptr){
+    send_local_reply_config->rewriteStatusCodeIfMatches(response_code, body_text);
+  }
 
   HeaderMapPtr response_headers{
       new HeaderMapImpl{{Headers::get().Status, std::to_string(enumToInt(response_code))}}};

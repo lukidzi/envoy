@@ -346,7 +346,11 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
               list_of_pair.emplace_back(std::move(pair));  
         }
     }
-    send_local_reply_config_ = Http::Utility::SendLocalReplyConfigConstPtr(new Http::Utility::SendLocalReplyConfig(list_of_pair));
+
+    send_local_reply_config_ = Http::Utility::SendLocalReplyConfigConstPtr(
+      new Http::Utility::SendLocalReplyConfig(list_of_pair));
+  } else {
+    send_local_reply_config_ = nullptr;
   }
 }
 

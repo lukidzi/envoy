@@ -400,8 +400,8 @@ public:
   virtual bool shouldNormalizePath() const PURE;
 
   /**
-   * @return Http::Utility::SendLocalReplyConfig* configuration of custom reply 
-   * mappings returned by envoy.
+   * @return Http::Utility::SendLocalReplyConfig* configuration of custom reply from  
+   * local configuration.
    */
   virtual const Http::Utility::SendLocalReplyConfig* sendLocalReplyConfig() const PURE;
 };

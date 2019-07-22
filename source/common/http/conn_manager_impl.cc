@@ -1229,7 +1229,6 @@ void ConnectionManagerImpl::ActiveStream::sendLocalReply(
   }
   stream_info_.setResponseCodeDetails(details);
 
-  this->connection_manager_.config_.sendLocalReplyConfig()->rewriteStatusCodeIfMatches(code, body);
   //here make some function which change body and status code
   Utility::sendLocalReply(
       is_grpc_request,
@@ -1247,7 +1246,8 @@ void ConnectionManagerImpl::ActiveStream::sendLocalReply(
         // request instead.
         encodeData(nullptr, data, end_stream, FilterIterationStartState::CanStartFromCurrent);
       },
-      state_.destroyed_, code, body, grpc_status, is_head_request);
+      state_.destroyed_, code, body, grpc_status, is_head_request, 
+      this->connection_manager_.config_.sendLocalReplyConfig());
 }
 
 void ConnectionManagerImpl::ActiveStream::encode100ContinueHeaders(
@@ -2148,7 +2148,7 @@ void ConnectionManagerImpl::ActiveStreamEncoderFilter::responseDataTooLarge() {
           },
           parent_.state_.destroyed_, Http::Code::InternalServerError,
           CodeUtility::toString(Http::Code::InternalServerError), absl::nullopt,
-          parent_.is_head_request_);
+          parent_.is_head_request_, parent_.connection_manager_.config_.sendLocalReplyConfig());
       parent_.maybeEndEncode(parent_.state_.local_complete_);
     } else {
       resetStream();
