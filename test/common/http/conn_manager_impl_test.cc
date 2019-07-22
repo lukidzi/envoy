@@ -127,6 +127,8 @@ public:
     }
   }
 
+  void setupSendLocalReply() {}
+
   void setupFilterChain(int num_decoder_filters, int num_encoder_filters) {
     // NOTE: The length/repetition in this routine allows InSequence to work correctly in an outer
     // scope.
@@ -279,6 +281,9 @@ public:
   bool proxy100Continue() const override { return proxy_100_continue_; }
   const Http::Http1Settings& http1Settings() const override { return http1_settings_; }
   bool shouldNormalizePath() const override { return normalize_path_; }
+  const Http::Utility::SendLocalReplyConfig* sendLocalReplyConfig() const override {
+    return send_local_reply_config_.get();
+  }
 
   DangerousDeprecatedTestTime test_time_;
   ConnectionManagerImplHelper::RouteConfigProvider route_config_provider_;
@@ -327,6 +332,7 @@ public:
   bool preserve_external_request_id_ = false;
   Http::Http1Settings http1_settings_;
   bool normalize_path_ = false;
+  Http::Utility::SendLocalReplyConfigConstPtr send_local_reply_config_;
   NiceMock<Network::MockClientConnection> upstream_conn_; // for websocket tests
   NiceMock<Tcp::ConnectionPool::MockInstance> conn_pool_; // for websocket tests
 
