@@ -143,6 +143,7 @@ envoy_cc_library(
         ":conn_manager_config_interface",
         ":exception_lib",
         ":header_map_lib",
+        ":header_utility_lib",
         ":headers_lib",
         ":path_utility_lib",
         ":user_agent_lib",
@@ -315,6 +316,9 @@ envoy_cc_library(
     name = "header_utility_lib",
     srcs = ["header_utility.cc"],
     hdrs = ["header_utility.h"],
+    external_deps = [
+        "nghttp2",
+    ],
     deps = [
         "//include/envoy/http:header_map_interface",
         "//include/envoy/json:json_object_interface",
