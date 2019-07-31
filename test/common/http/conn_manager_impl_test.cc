@@ -243,7 +243,7 @@ public:
   // Http::ConnectionManagerConfig
   const std::list<AccessLog::InstanceSharedPtr>& accessLogs() override { return access_logs_; }
   ServerConnectionPtr createCodec(Network::Connection&, const Buffer::Instance&,
-                                  ServerConnectionCallbacks&, const bool) override {
+                                  ServerConnectionCallbacks&) override {
     return ServerConnectionPtr{codec_};
   }
   DateProvider& dateProvider() override { return date_provider_; }
@@ -281,6 +281,7 @@ public:
   bool proxy100Continue() const override { return proxy_100_continue_; }
   const Http::Http1Settings& http1Settings() const override { return http1_settings_; }
   bool shouldNormalizePath() const override { return normalize_path_; }
+  bool shouldMergeSlashes() const override { return merge_slashes_; }
   const Http::Utility::SendLocalReplyConfig* sendLocalReplyConfig() const override {
     return send_local_reply_config_.get();
   }
@@ -332,7 +333,11 @@ public:
   bool preserve_external_request_id_ = false;
   Http::Http1Settings http1_settings_;
   bool normalize_path_ = false;
+<<<<<<< HEAD
   Http::Utility::SendLocalReplyConfigConstPtr send_local_reply_config_;
+=======
+  bool merge_slashes_ = false;
+>>>>>>> master
   NiceMock<Network::MockClientConnection> upstream_conn_; // for websocket tests
   NiceMock<Tcp::ConnectionPool::MockInstance> conn_pool_; // for websocket tests
 
