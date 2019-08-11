@@ -334,19 +334,19 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
     }
   }
 
-  if (config.has_send_local_reply_config()) {
+  if (!config.has_send_local_reply_config().empty()) {
     std::list<std::pair<Http::Utility::LocalReplyMatcher, Http::Utility::LocalReplyRewriter>>
-        list_of_pair;
-    if (config.send_local_reply_config().config_size() > 0) {
-      for (auto& match_rewrite_config : config.send_local_reply_config().config()) {
+        list_of_pairs;
+      for (auto& match_rewrite_config : config.send_local_reply_config()) {
         std::pair<Http::Utility::LocalReplyMatcher, Http::Utility::LocalReplyRewriter> pair =
             std::make_pair(
-                Http::Utility::LocalReplyMatcher{match_rewrite_config.match().status(),
-                                                 match_rewrite_config.match().body_pattern()},
+                Http::Utility::LocalReplyMatcher{
+                                                match_rewrite_config.match().status_codes(),
+                                                match_rewrite_config.match().body_pattern(),
+                                                match_rewrite_config.match().response_flags()},
                 Http::Utility::LocalReplyRewriter{match_rewrite_config.rewrite().status()});
-        list_of_pair.emplace_back(std::move(pair));
+        list_of_pairs.emplace_back(std::move(pair));
       }
-    }
     send_local_reply_config_ = Http::Utility::SendLocalReplyConfigConstPtr(
         new Http::Utility::SendLocalReplyConfig(list_of_pair));
   }

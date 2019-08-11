@@ -13,6 +13,7 @@ import "envoy/api/v2/rds.proto";
 import "envoy/api/v2/srds.proto";
 import "envoy/config/filter/accesslog/v2/accesslog.proto";
 import "envoy/type/percent.proto";
+import "envoy/type/matcher/string.proto";
 
 import "google/protobuf/any.proto";
 import "google/protobuf/duration.proto";
@@ -433,20 +434,18 @@ message HttpConnectionManager {
   // `HTTP spec <https://tools.ietf.org/html/rfc3986>` and is provided for convenience.
   bool merge_slashes = 33;
 
-   // Configuration of local reply send by envoy for http responses. Allows to define custom rules
+  // Configuration of local reply send by envoy for http responses. Allows to define custom rules
   // which maps response attribute returned by envoy to different one. Currently mapping of
   // status code is implemented.
   message SendLocalReplyConfig {
-
-    // Holds pair of match and rewrite configuration.
-    message RulesConfig {
-
       // Configuration which allows to define custom rules for matching local response.
       message Match {
         // Definition of status code to match.
-        uint32 status = 1 [(validate.rules).uint32 = {gte: 100, lt: 600}];
+        repeated uint32 status_codes = 1;
         // Definition of regex body pattern to match.
-        string body_pattern = 2;
+        envoy.type.matcher.StringMatcher body_pattern = 2;
+        // Definition of response flags to match.
+        envoy.config.filter.accesslog.v2.ResponseFlags response_flags;
       };
 
       // Configuration which allows to define custom mapping for matched field.
@@ -457,12 +456,9 @@ message HttpConnectionManager {
 
       Match match = 1;
       Rewrite rewrite = 2;
-    };
-    // This field holds list of custom match/rewrite pairs.
-    repeated RulesConfig config = 1;
   };
 
-  SendLocalReplyConfig send_local_reply_config = 34;
+  repeated SendLocalReplyConfig send_local_reply_config = 34;
 
 }
 

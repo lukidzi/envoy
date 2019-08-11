@@ -15,6 +15,7 @@
 
 #include "common/common/enum_to_int.h"
 #include "common/json/json_loader.h"
+#include "common/common/matchers.h"
 
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
@@ -44,13 +45,14 @@ private:
  * Structure which holds match configuration from proto file for SendLocalReplyConfig.
  */
 struct LocalReplyMatcher {
-  LocalReplyMatcher(const uint32_t status, const std::string& body_pattern) : status_(status) {
-    if (body_pattern.empty()) {
-      should_match_all_response_body_ = true;
-    } else {
-      should_match_all_response_body_ = false;
-      body_pattern_ = RegexUtil::parseRegex(body_pattern);
-    }
+  LocalReplyMatcher(
+   const absl::Span<const Protobuf::uint32> status_codes,
+   const envoy::type::matcher::StringMatcher& body_pattern,
+   const envoy::data::accesslog::v2::ResponseFlags& response_flags
+   ){
+   
+   // should be mapped with if statement to response StreamInfo::ResponseFlag ?
+   // and keep it as uint64_t
   }
   /**
    * Method check if returned local response is matching given conditions.
@@ -59,20 +61,20 @@ struct LocalReplyMatcher {
    * @return true if status and body match given conditions.
    */
   bool isMatching(Http::Code& status, absl::string_view& body) const {
-    if (status_ != 0 && status_ != enumToInt(status)) {
-      return false;
-    }
-    if (should_match_all_response_body_) {
-      return true;
-    }
-    if (!std::regex_match(body.begin(), body.end(), body_pattern_)) {
-      return false;
-    }
+    // if (status_ != 0 && status_ != enumToInt(status)) {
+    //   return false;
+    // }
+    // if (should_match_all_response_body_) {
+    //   return true;
+    // }
+    // if (!std::regex_match(body.begin(), body.end(), body_pattern_)) {
+    //   return false;
+    // }
     return true;
   };
-  uint32_t status_;
-  std::regex body_pattern_;
-  bool should_match_all_response_body_;
+  std::list<uint32_t> status_;
+  Matchers::StringMatcher body_pattern_;
+  uint64_t response_flags_;
 };
 
 /**

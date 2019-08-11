@@ -13,6 +13,7 @@ api_proto_library_internal(
         "//envoy/api/v2/core:protocol",
         "//envoy/config/filter/accesslog/v2:accesslog",
         "//envoy/type:percent",
+        "//envoy/type/matcher:string",
     ],
 )
 
@@ -27,5 +28,6 @@ api_go_proto_library(
         "//envoy/api/v2/core:protocol_go_proto",
         "//envoy/config/filter/accesslog/v2:accesslog_go_proto",
         "//envoy/type:percent_go_proto",
+        "//envoy/type/matcher:string_go_proto",
     ],
 )
