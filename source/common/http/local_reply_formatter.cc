@@ -16,49 +16,49 @@
 
 namespace Envoy{
 namespace Http{
-namespace {
+// namespace {
 
 
-AccessLog::FilterPtr fromProto(const envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher& config,
-                         Runtime::Loader& runtime, Runtime::RandomGenerator& random,
-                         ProtobufMessage::ValidationVisitor& validation_visitor) {
-  switch (config.matcher_specifier_case()) {
-  case envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher::kAndFilter:
-    return AccessLog::FilterPtr{new Http::AndFilter(config.and_filter(), runtime, random, validation_visitor)};
-  case envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher::kOrFilter:
-    return AccessLog::FilterPtr{new Http::OrFilter(config.or_filter(), runtime, random, validation_visitor)};
-  case envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher::kResponseFlagFilter:
-    MessageUtil::validate(config, validation_visitor);
-    return AccessLog::FilterPtr{new AccessLog::ResponseFlagFilter(config.response_flag_filter())};
-  default:
-    NOT_REACHED_GCOVR_EXCL_LINE;
-  }
-}
+// AccessLog::FilterPtr fromProto(const envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher& config,
+//                          Runtime::Loader& runtime, Runtime::RandomGenerator& random,
+//                          ProtobufMessage::ValidationVisitor& validation_visitor) {
+//   switch (config.matcher_specifier_case()) {
+//   case envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher::kAndFilter:
+//     return AccessLog::FilterPtr{new Http::AndFilter(config.and_filter(), runtime, random, validation_visitor)};
+//   case envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher::kOrFilter:
+//     return AccessLog::FilterPtr{new Http::OrFilter(config.or_filter(), runtime, random, validation_visitor)};
+//   case envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher::kResponseFlagFilter:
+//     MessageUtil::validate(config, validation_visitor);
+//     return AccessLog::FilterPtr{new AccessLog::ResponseFlagFilter(config.response_flag_filter())};
+//   default:
+//     NOT_REACHED_GCOVR_EXCL_LINE;
+//   }
+// }
 
-std::list<std::pair<AccessLog::FilterPtr, Http::ResponseRewriter>> createMatcherRewriter(
-    const envoy::config::filter::network::http_connection_manager::v2::HttpConnectionManager& config,
-    Server::Configuration::FactoryContext& context){
+// std::list<std::pair<AccessLog::FilterPtr, Http::ResponseRewriter>> createMatcherRewriter(
+//     const envoy::config::filter::network::http_connection_manager::v2::HttpConnectionManager& config,
+//     Server::Configuration::FactoryContext& context){
 
-  if(config.has_local_reply_config() && !config.local_reply_config().mapper().empty()){
-    std::list<std::pair<AccessLog::FilterPtr, Http::ResponseRewriter>> list_of_pairs;
-    for(auto& config_pair: config.local_reply_config().mapper()){
-      if (config_pair.has_matcher() && config_pair.has_rewriter()){
+//   if(config.has_local_reply_config() && !config.local_reply_config().mapper().empty()){
+//     std::list<std::pair<AccessLog::FilterPtr, Http::ResponseRewriter>> list_of_pairs;
+//     for(auto& config_pair: config.local_reply_config().mapper()){
+//       if (config_pair.has_matcher() && config_pair.has_rewriter()){
 
-        std::pair<AccessLog::FilterPtr, Http::ResponseRewriter> pair = std::make_pair(
-          fromProto(config_pair.matcher(), context.runtime(), context.random(), context.messageValidationVisitor()),
-          Http::ResponseRewriter{PROTOBUF_GET_WRAPPED_OR_DEFAULT(config_pair.rewriter(), status_code, absl::optional<uint32_t>())}
-        );
+//         std::pair<AccessLog::FilterPtr, Http::ResponseRewriter> pair = std::make_pair(
+//           fromProto(config_pair.matcher(), context.runtime(), context.random(), context.messageValidationVisitor()),
+//           Http::ResponseRewriter{PROTOBUF_GET_WRAPPED_OR_DEFAULT(config_pair.rewriter(), status_code, absl::optional<uint32_t>())}
+//         );
 
-        list_of_pairs.emplace_back(std::move(pair));
-      }
-    }
-    return list_of_pairs;
-  }
+//         list_of_pairs.emplace_back(std::move(pair));
+//       }
+//     }
+//     return list_of_pairs;
+//   }
 
-  return std::list<std::pair<AccessLog::FilterPtr, Http::ResponseRewriter>>{};
+//   return std::list<std::pair<AccessLog::FilterPtr, Http::ResponseRewriter>>{};
 
-}
-}
+// }
+// }
 
     //Here we need to pass list of filters and rewrite
 JsonFormatterImpl::JsonFormatterImpl(std::unordered_map<std::string, std::string> formatter,
@@ -66,6 +66,11 @@ JsonFormatterImpl::JsonFormatterImpl(std::unordered_map<std::string, std::string
                                      Server::Configuration::FactoryContext& context)
                                      {
     formatter_ = std::make_unique<AccessLog::JsonFormatterImpl>(formatter);
+    FilterPtr filter;
+    if(config.has_local_reply_config() && !config.local_reply_config().mapper().empty()){
+    filter = FilterFactory::fromProto(config.filter(), context.runtime(), context.random(),
+                                      context.messageValidationVisitor());
+    }
     match_and_rewrite_ = createMatcherRewriter(config, context);
 
 }
@@ -97,55 +102,6 @@ void JsonFormatterImpl::insertContentHeaders(const absl::string_view& body,
                                       Http::HeaderMap* headers) const {
     headers->insertContentLength().value(body.size());
     headers->insertContentType().value(Headers::get().ContentTypeValues.Json);
-}
-
-
-Http::OperatorFilter::OperatorFilter(const Protobuf::RepeatedPtrField<envoy::config::filter::network::http_connection_manager::v2::ResponseMatcher>& configs,
-                               Runtime::Loader& runtime, Runtime::RandomGenerator& random,
-                               ProtobufMessage::ValidationVisitor& validation_visitor) {
-  for (const auto& config : configs) {
-    filters_.emplace_back(fromProto(config, runtime, random, validation_visitor));
-  }
-}
-
-Http::OrFilter::OrFilter(const envoy::config::filter::network::http_connection_manager::v2::OrFilter& config,
-                   Runtime::Loader& runtime, Runtime::RandomGenerator& random,
-                   ProtobufMessage::ValidationVisitor& validation_visitor)
-    : OperatorFilter(config.filters(), runtime, random, validation_visitor) {}
-
-Http::AndFilter::AndFilter(const envoy::config::filter::network::http_connection_manager::v2::AndFilter& config,
-                     Runtime::Loader& runtime, Runtime::RandomGenerator& random,
-                     ProtobufMessage::ValidationVisitor& validation_visitor)
-    : OperatorFilter(config.filters(), runtime, random, validation_visitor) {}
-
-bool Http::OrFilter::evaluate(const StreamInfo::StreamInfo& info, const Http::HeaderMap& request_headers,
-                        const Http::HeaderMap& response_headers,
-                        const Http::HeaderMap& response_trailers) {
-  bool result = false;
-  for (auto& filter : filters_) {
-    result |= filter->evaluate(info, request_headers, response_headers, response_trailers);
-
-    if (result) {
-      break;
-    }
-  }
-
-  return result;
-}
-
-bool Http::AndFilter::evaluate(const StreamInfo::StreamInfo& info, const Http::HeaderMap& request_headers,
-                         const Http::HeaderMap& response_headers,
-                         const Http::HeaderMap& response_trailers) {
-  bool result = true;
-  for (auto& filter : filters_) {
-    result &= filter->evaluate(info, request_headers, response_headers, response_trailers);
-
-    if (!result) {
-      break;
-    }
-  }
-
-  return result;
 }
 
 }
