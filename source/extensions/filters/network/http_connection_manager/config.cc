@@ -56,6 +56,32 @@ FilterFactoryMap::const_iterator findUpgradeCaseInsensitive(const FilterFactoryM
   return upgrade_map.end();
 }
 
+AccessLog::FormatterPtr createFormatter(const Protobuf::Message& config,
+                                              Server::Configuration::FactoryContext& context) {
+  const auto& format_config = MessageUtil::downcastAndValidate<const envoy::config::filter::network::v2::HttpConnectionManager&>(
+          config, context.messageValidationVisitor());
+  AccessLog::FormatterPtr formatter;
+
+  // if (fal_config.access_log_format_case() == envoy::config::accesslog::v2::FileAccessLog::kFormat ||
+  //     fal_config.access_log_format_case() ==
+  //         envoy::config::accesslog::v2::FileAccessLog::ACCESS_LOG_FORMAT_NOT_SET) {
+  //   if (fal_config.format().empty()) {
+  //     formatter = AccessLog::AccessLogFormatUtils::defaultAccessLogFormatter();
+  //   } else {
+  //     formatter = std::make_unique<AccessLog::FormatterImpl>(fal_config.format());
+  //   }
+  // } else if (fal_config.access_log_format_case() ==
+  //            envoy::type::v2::StringOrJson) {
+  //   auto json_format_map = this->convertJsonFormatToMap(fal_config.json_format());
+  //   formatter = std::make_unique<AccessLog::JsonFormatterImpl>(json_format_map);
+  // } else {
+  //   throw EnvoyException(
+  //       "Invalid access_log format provided. Only 'format' and 'json_format' are supported.");
+  // }
+
+  return formatter;
+}
+
 std::unique_ptr<Http::InternalAddressConfig> createInternalAddressConfig(
     const envoy::config::filter::network::http_connection_manager::v2::HttpConnectionManager&
         config) {
@@ -380,6 +406,9 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
           std::make_pair(name, FilterConfig{std::move(factories), enabled}));
     }
   }
+
+  //local_reply
+
 }
 
 void HttpConnectionManagerConfig::processFilter(
