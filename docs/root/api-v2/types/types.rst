@@ -6,6 +6,7 @@ Types
   :maxdepth: 2
 
   ../type/format.proto
+  ../type/http.proto
   ../type/http_status.proto
   ../type/percent.proto
   ../type/range.proto
