@@ -8,6 +8,7 @@
 
 #include "common/http/date_provider.h"
 #include "common/network/utility.h"
+#include "common/local_reply/local_reply.h"
 
 namespace Envoy {
 namespace Http {
@@ -377,6 +378,8 @@ public:
    * one.
    */
   virtual bool shouldMergeSlashes() const PURE;
+
+  virtual LocalReply::LocalReply* localReply() const PURE;
 };
 } // namespace Http
 } // namespace Envoy

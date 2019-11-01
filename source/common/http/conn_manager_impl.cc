@@ -1332,6 +1332,8 @@ void ConnectionManagerImpl::ActiveStream::sendLocalReply(
     createFilterChain();
   }
   stream_info_.setResponseCodeDetails(details);
+  this->connection_manager_.config_.localReply()->test(request_headers_.get(), response_headers_.get(), response_trailers_.get(), stream_info_);
+
   Utility::sendLocalReply(
       is_grpc_request,
       [this, modify_headers](HeaderMapPtr&& headers, bool end_stream) -> void {

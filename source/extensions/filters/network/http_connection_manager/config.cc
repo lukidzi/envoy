@@ -22,6 +22,7 @@
 #include "common/http/http2/codec_impl.h"
 #include "common/http/utility.h"
 #include "common/json/config_schemas.h"
+#include "common/local_reply/local_reply.h"
 #include "common/protobuf/utility.h"
 #include "common/router/rds_impl.h"
 #include "common/router/scoped_rds.h"
@@ -417,10 +418,27 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
 
   //local_reply
   if(config.has_local_reply_config()){
-    AccessLog::FormatterPtr formatter = createFormatter(config.local_reply_config(), context);
-    std::cout << "Test formatter" ;
+    std::list<LocalReply::ResponseMapperPtr> mappers;
+    if (!config.local_reply_config().mapper().empty()) {
+
+      for(auto& mapper: config.local_reply_config().mapper()){
+        if (mapper.has_filter() && mapper.has_rewriter()){
+          AccessLog::FilterPtr filter = AccessLog::FilterFactory::fromProto(mapper.filter(), context.runtime(), context.random(),
+                                          context.messageValidationVisitor());
+
+          LocalReply::ResponseRewriterPtr rewriter = std::make_unique<LocalReply::ResponseRewriter>(
+            LocalReply::ResponseRewriter{PROTOBUF_GET_WRAPPED_OR_DEFAULT(mapper.rewriter(), status_code, absl::optional<uint32_t>())});
+
+          LocalReply::ResponseMapperPtr mapper = std::make_unique<LocalReply::ResponseMapper>(LocalReply::ResponseMapper{std::move(filter), std::move(rewriter)});
+          mappers.emplace_back(std::move(mapper));
+
+        }
+      }
+    }
+    local_reply_ = std::make_unique<LocalReply::LocalReply>(LocalReply::LocalReply{std::move(mappers), createFormatter(config.local_reply_config(), context)});
+    }
   }
-}
+
 
 void HttpConnectionManagerConfig::processFilter(
     const envoy::config::filter::network::http_connection_manager::v2::HttpFilter& proto_config,
