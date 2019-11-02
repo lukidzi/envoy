@@ -123,8 +123,8 @@ envoy_cc_library(
         "//include/envoy/config:config_provider_interface",
         "//include/envoy/http:filter_interface",
         "//include/envoy/router:rds_interface",
-        "//source/common/network:utility_lib",
         "//source/common/local_reply:local_reply_lib",
+        "//source/common/network:utility_lib",
     ],
 )
 

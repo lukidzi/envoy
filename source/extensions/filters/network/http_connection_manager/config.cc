@@ -18,6 +18,7 @@
 #include "common/http/conn_manager_utility.h"
 #include "common/http/date_provider_impl.h"
 #include "common/http/default_server_string.h"
+#include "common/http/headers.h"
 #include "common/http/http1/codec_impl.h"
 #include "common/http/http2/codec_impl.h"
 #include "common/http/utility.h"
@@ -58,7 +59,8 @@ FilterFactoryMap::const_iterator findUpgradeCaseInsensitive(const FilterFactoryM
   return upgrade_map.end();
 }
 
-std::unordered_map<std::string, std::string> convertJsonFormatToMap(ProtobufWkt::Struct json_format) {
+std::unordered_map<std::string, std::string>
+convertJsonFormatToMap(ProtobufWkt::Struct json_format) {
   std::unordered_map<std::string, std::string> output;
   for (const auto& pair : json_format.fields()) {
     if (pair.second.kind_case() != ProtobufWkt::Value::kStringValue) {
@@ -70,25 +72,39 @@ std::unordered_map<std::string, std::string> convertJsonFormatToMap(ProtobufWkt:
 }
 
 AccessLog::FormatterPtr createFormatter(const Protobuf::Message& config,
-                                              Server::Configuration::FactoryContext& context) {
-  const auto& local_reply_config = MessageUtil::downcastAndValidate<const envoy::config::filter::network::http_connection_manager::v2::LocalReplyConfig&>(
-          config, context.messageValidationVisitor());
+                                        Server::Configuration::FactoryContext& context) {
+  const auto& local_reply_config = MessageUtil::downcastAndValidate<
+      const envoy::config::filter::network::http_connection_manager::v2::LocalReplyConfig&>(
+      config, context.messageValidationVisitor());
   AccessLog::FormatterPtr formatter;
 
   if (local_reply_config.has_format()) {
     if (local_reply_config.format().format_case() == envoy::type::StringOrJson::kStringFormat) {
-      formatter = std::make_unique<Envoy::AccessLog::FormatterImpl>(local_reply_config.format().string_format());
-    } else if (local_reply_config.format().format_case() == envoy::type::StringOrJson::kJsonFormat){
+      formatter = std::make_unique<Envoy::AccessLog::FormatterImpl>(
+          local_reply_config.format().string_format());
+    } else if (local_reply_config.format().format_case() ==
+               envoy::type::StringOrJson::kJsonFormat) {
       auto json_format_map = convertJsonFormatToMap(local_reply_config.format().json_format());
       formatter = std::make_unique<AccessLog::JsonFormatterImpl>(json_format_map);
     } else {
-      formatter = AccessLog::AccessLogFormatUtils::defaultAccessLogFormatter();
+      formatter = std::make_unique<Envoy::AccessLog::FormatterImpl>("%RESP_BODY%");
     }
   } else {
-    formatter = AccessLog::AccessLogFormatUtils::defaultAccessLogFormatter();
+    formatter = std::make_unique<Envoy::AccessLog::FormatterImpl>("%RESP_BODY%");
   }
 
   return formatter;
+}
+
+std::string getContentType(
+    const envoy::config::filter::network::http_connection_manager::v2::LocalReplyConfig& config) {
+  if (!config.has_format()) {
+    return Http::Headers::get().ContentTypeValues.Text;
+  } else if (config.format().format_case() == envoy::type::StringOrJson::kJsonFormat) {
+    return Http::Headers::get().ContentTypeValues.Json;
+  } else {
+    return Http::Headers::get().ContentTypeValues.Text;
+  }
 }
 
 std::unique_ptr<Http::InternalAddressConfig> createInternalAddressConfig(
@@ -416,29 +432,32 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
     }
   }
 
-  //local_reply
-  if(config.has_local_reply_config()){
+  // local_reply
+  if (config.has_local_reply_config()) {
     std::list<LocalReply::ResponseMapperPtr> mappers;
     if (!config.local_reply_config().mapper().empty()) {
 
-      for(auto& mapper: config.local_reply_config().mapper()){
-        if (mapper.has_filter() && mapper.has_rewriter()){
-          AccessLog::FilterPtr filter = AccessLog::FilterFactory::fromProto(mapper.filter(), context.runtime(), context.random(),
-                                          context.messageValidationVisitor());
+      for (auto& mapper : config.local_reply_config().mapper()) {
+        if (mapper.has_filter() && mapper.has_rewriter()) {
+          AccessLog::FilterPtr filter = AccessLog::FilterFactory::fromProto(
+              mapper.filter(), context.runtime(), context.random(),
+              context.messageValidationVisitor());
 
           LocalReply::ResponseRewriterPtr rewriter = std::make_unique<LocalReply::ResponseRewriter>(
-            LocalReply::ResponseRewriter{PROTOBUF_GET_WRAPPED_OR_DEFAULT(mapper.rewriter(), status_code, absl::optional<uint32_t>())});
+              LocalReply::ResponseRewriter{PROTOBUF_GET_WRAPPED_OR_DEFAULT(
+                  mapper.rewriter(), status_code, absl::optional<uint32_t>())});
 
-          LocalReply::ResponseMapperPtr mapper = std::make_unique<LocalReply::ResponseMapper>(LocalReply::ResponseMapper{std::move(filter), std::move(rewriter)});
+          LocalReply::ResponseMapperPtr mapper = std::make_unique<LocalReply::ResponseMapper>(
+              LocalReply::ResponseMapper{std::move(filter), std::move(rewriter)});
           mappers.emplace_back(std::move(mapper));
-
         }
       }
     }
-    local_reply_ = std::make_unique<LocalReply::LocalReply>(LocalReply::LocalReply{std::move(mappers), createFormatter(config.local_reply_config(), context)});
-    }
+    local_reply_ = std::make_unique<LocalReply::LocalReply>(LocalReply::LocalReply{
+        std::move(mappers), createFormatter(config.local_reply_config(), context),
+        getContentType(config.local_reply_config())});
   }
-
+}
 
 void HttpConnectionManagerConfig::processFilter(
     const envoy::config::filter::network::http_connection_manager::v2::HttpFilter& proto_config,

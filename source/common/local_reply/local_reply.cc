@@ -3,58 +3,64 @@
 #include <string>
 #include <vector>
 
-#include "envoy/config/filter/network/http_connection_manager/v2/http_connection_manager.pb.validate.h"
-
 #include "common/access_log/access_log_formatter.h"
 
 namespace Envoy {
 namespace LocalReply {
 
-// std::unordered_map<std::string, std::string> convertJsonFormatToMap(ProtobufWkt::Struct json_format) {
-//   std::unordered_map<std::string, std::string> output;
-//   for (const auto& pair : json_format.fields()) {
-//     if (pair.second.kind_case() != ProtobufWkt::Value::kStringValue) {
-//       throw EnvoyException("Only string values are supported in the JSON access log format.");
-//     }
-//     output.emplace(pair.first, pair.second.string_value());
-//   }
-//   return output;
-// }
+ResponseRewriter::ResponseRewriter(absl::optional<uint32_t> response_code)
+    : response_code_(response_code) {}
 
-// AccessLog::FormatterPtr createFormatter(const Protobuf::Message& config,
-//                                               Server::Configuration::FactoryContext& context) {
-//   const auto& local_reply_config = MessageUtil::downcastAndValidate<const envoy::config::filter::network::http_connection_manager::v2::LocalReplyConfig&>(
-//           config, context.messageValidationVisitor());
-//   AccessLog::FormatterPtr formatter;
+void ResponseRewriter::rewrite(Http::Code& code) {
+  code = static_cast<Http::Code>(response_code_.value());
+}
 
-//   if (local_reply_config.has_format()) {
-//     if (local_reply_config.format().format_case() == envoy::type::StringOrJson::kStringFormat) {
-//       formatter = std::make_unique<Envoy::AccessLog::FormatterImpl>(local_reply_config.format().string_format());
-//     } else if (local_reply_config.format().format_case() == envoy::type::StringOrJson::kJsonFormat){
-//       auto json_format_map = convertJsonFormatToMap(local_reply_config.format().json_format());
-//       formatter = std::make_unique<AccessLog::JsonFormatterImpl>(json_format_map);
-//     } else {
-//       formatter = AccessLog::AccessLogFormatUtils::defaultAccessLogFormatter();
-//     }
-//   } else {
-//     formatter = AccessLog::AccessLogFormatUtils::defaultAccessLogFormatter();
-//   }
+ResponseMapper::ResponseMapper(AccessLog::FilterPtr&& filter, ResponseRewriterPtr&& rewriter) {
+  filter_ = std::move(filter);
+  rewriter_ = std::move(rewriter);
+}
 
-//   return formatter;
-// }
+bool ResponseMapper::match(const Http::HeaderMap* request_headers,
+                           const Http::HeaderMap* response_headers,
+                           const Http::HeaderMap* response_trailers,
+                           const StreamInfo::StreamInfo& stream_info) {
+  return filter_->evaluate(stream_info, *request_headers, *response_headers, *response_trailers);
+}
 
-  // ResponseMapper::ResponseMapper(AccessLog::FilterPtr&& filter, ResponseRewriter rewriter)
-  // : filter_(std::move(filter)), rewriter_(rewriter){
+void ResponseMapper::rewrite(Http::Code& status_code) { rewriter_->rewrite(status_code); }
 
-  // };
+LocalReply::LocalReply(std::list<ResponseMapperPtr> mappers, AccessLog::FormatterPtr&& formatter,
+                       std::string content_type) {
+  mappers_ = std::move(mappers);
+  formatter_ = std::move(formatter);
+  content_type_ = content_type;
+}
 
-  // LocalReply::LocalReply(const envoy::config::filter::network::http_connection_manager::v2::LocalReplyConfig& local_reply_config){
-  //   if(local_reply_config.mapper().empty()){
-  //     std::cout<< "Test value";
-  //   } else {
-  //     std::cout<< "Not empty";
-  //   }
-  // };
-  
+void LocalReply::matchAndRewrite(const Http::HeaderMap* request_headers,
+                                 const Http::HeaderMap* response_headers,
+                                 const Http::HeaderMap* response_trailers,
+                                 const StreamInfo::StreamInfo& stream_info, Http::Code& code) {
+  for (auto& mapper : mappers_) {
+    if (mapper->match(request_headers, response_headers, response_trailers, stream_info)) {
+      mapper->rewrite(code);
+      break;
+    }
+  }
+}
+
+std::string LocalReply::format(const Http::HeaderMap* request_headers,
+                               const Http::HeaderMap* response_headers,
+                               const Http::HeaderMap* response_trailers,
+                               const StreamInfo::StreamInfo& stream_info,
+                               const absl::string_view& body) {
+  return formatter_->format(*request_headers, *response_headers, *response_trailers, stream_info,
+                            body);
+}
+
+void LocalReply::insertContentHeaders(const absl::string_view& body, Http::HeaderMap* headers) {
+  headers->insertContentLength().value(body.size());
+  headers->insertContentType().value(content_type_);
+}
+
 } // namespace LocalReply
 } // namespace Envoy

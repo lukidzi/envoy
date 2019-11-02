@@ -13,7 +13,7 @@ envoy_cc_library(
     srcs = ["local_reply.cc"],
     hdrs = ["local_reply.h"],
     deps = [
+        "//include/envoy/http:codes_interface",
         "//source/common/access_log:access_log_formatter_lib",
-        "@envoy_api//envoy/config/filter/network/http_connection_manager/v2:pkg_cc_proto",
     ],
 )

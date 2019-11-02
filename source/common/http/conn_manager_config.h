@@ -7,8 +7,8 @@
 #include "envoy/stats/scope.h"
 
 #include "common/http/date_provider.h"
-#include "common/network/utility.h"
 #include "common/local_reply/local_reply.h"
+#include "common/network/utility.h"
 
 namespace Envoy {
 namespace Http {
