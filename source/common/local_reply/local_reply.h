@@ -10,10 +10,17 @@
 namespace Envoy {
 namespace LocalReply {
 
+/**
+ * Configuration of response rewriter which contains status code to which matched local response should be mapped.
+ */
 class ResponseRewriter {
 public:
   ResponseRewriter(absl::optional<uint32_t> response_code);
 
+  /**
+   * Change given status code to one defined during instance creation.
+   * @param status_code supplies reference to status code.
+   */
   void rewrite(Http::Code& code);
 
 private:
@@ -22,13 +29,25 @@ private:
 
 using ResponseRewriterPtr = std::unique_ptr<ResponseRewriter>;
 
+/**
+ * Configuration of response mapper which contains pair of filter and definiton of rewriter.
+ */
 class ResponseMapper {
 public:
   ResponseMapper(AccessLog::FilterPtr&& filter, ResponseRewriterPtr&& rewriter);
 
+  /**
+   * Check if given request matches defined filters.
+   * @param request_headers supplies the information about request headers required by filters
+   * @param stream_info supplies the information about streams required by filters.
+   */
   bool match(const Http::HeaderMap* request_headers, const Http::HeaderMap* response_headers,
              const Http::HeaderMap* response_trailers, const StreamInfo::StreamInfo& stream_info);
 
+  /**
+   * Call rewriter method from ResponseRewriter.
+   * @param status_code supplies reference to status code.
+   */
   void rewrite(Http::Code& status_code);
 
 private:
@@ -44,21 +63,33 @@ public:
              std::string content_type);
 
   /**
-   * Run through defined in configuration filters and for first matched filter rewrite status code.
-   * @param request_headers supplies the information about request headers required by filters
+   * Run through defined in configuration filters and for first matched filter rewrite local response.
+   * @param request_headers supplies the information about request headers required by filters.
    * @param stream_info supplies the information about streams required by filters.
-   * @param code status code which will be rewrited
+   * @param code local reply status code.
    */
   void matchAndRewrite(const Http::HeaderMap* request_headers,
                        const Http::HeaderMap* response_headers,
                        const Http::HeaderMap* response_trailers,
                        const StreamInfo::StreamInfo& stream_info, Http::Code& code);
 
+  /**
+   * Run AccessLogFormatter format method which reformat data to structure defined in configuration.
+   * @param request_headers supplies the information about request headers required by filters.
+   * @param stream_info supplies the information about streams required by filters.
+   * @param body original response body.
+   * @return formatted response body as string.
+   */
   std::string format(const Http::HeaderMap* request_headers,
                      const Http::HeaderMap* response_headers,
                      const Http::HeaderMap* response_trailers,
                      const StreamInfo::StreamInfo& stream_info, const absl::string_view& body);
 
+  /**
+   * Insert proper content-length and content-type headers for configured format.
+   * @param body supplies the body of response.
+   * @param headers supplies the pointer to header to which new one will be added.
+   */
   void insertContentHeaders(const absl::string_view& body, Http::HeaderMap* headers);
 
 private:
