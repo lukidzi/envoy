@@ -298,9 +298,22 @@ void Utility::sendLocalReply(bool is_grpc, StreamDecoderFilterCallbacks& callbac
       [&](Buffer::Instance& data, bool end_stream) -> void {
         callbacks.encodeData(data, end_stream);
       },
-      [&](HeaderMapPtr&& headers, Code&) -> std::string {
-        headers->insertContentType().value(Headers::get().ContentTypeValues.Json);
-        return std::string{};
+      is_reset, response_code, body_text, grpc_status, is_head_request);
+}
+
+void Utility::sendLocalReply(
+    bool is_grpc, std::function<void(HeaderMapPtr&& headers, bool end_stream)> encode_headers,
+    std::function<void(Buffer::Instance& data, bool end_stream)> encode_data, const bool& is_reset,
+    Code response_code, absl::string_view body_text,
+    const absl::optional<Grpc::Status::GrpcStatus> grpc_status, bool is_head_request) {
+  sendLocalReply(
+      is_grpc, encode_headers, encode_data,
+      [&](HeaderMapPtr&& headers, Code&, absl::string_view& body_text) -> std::string {
+        if (!body_text.empty()) {
+          headers->insertContentLength().value(body_text.size());
+          headers->insertContentType().value(Headers::get().ContentTypeValues.Text);
+        }
+        return body_text.data();
       },
       is_reset, response_code, body_text, grpc_status, is_head_request);
 }
@@ -308,8 +321,8 @@ void Utility::sendLocalReply(bool is_grpc, StreamDecoderFilterCallbacks& callbac
 void Utility::sendLocalReply(
     bool is_grpc, std::function<void(HeaderMapPtr&& headers, bool end_stream)> encode_headers,
     std::function<void(Buffer::Instance& data, bool end_stream)> encode_data,
-    std::function<std::string(HeaderMapPtr&& headers, Code& code)> rewrite_response, const bool& is_reset,
-    Code response_code, absl::string_view body_text,
+    std::function<std::string(HeaderMapPtr&& headers, Code& code, absl::string_view& body_text)> rewrite_response,
+    const bool& is_reset, Code response_code, absl::string_view body_text,
     const absl::optional<Grpc::Status::GrpcStatus> grpc_status, bool is_head_request) {
   // encode_headers() may reset the stream, so the stream must not be reset before calling it.
   ASSERT(!is_reset);
@@ -332,7 +345,7 @@ void Utility::sendLocalReply(
   }
 
   HeaderMapPtr response_headers{new HeaderMapImpl{}};
-  std::string formatted_body = rewrite_response(std::move(response_headers), response_code);
+  std::string formatted_body = rewrite_response(std::move(response_headers), response_code, body_text);
   response_headers->insertStatus().value(std::to_string(enumToInt(response_code)));
 
   if (is_head_request) {

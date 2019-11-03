@@ -1367,13 +1367,16 @@ void ConnectionManagerImpl::ActiveStream::sendLocalReply(
         // request instead.
         encodeData(nullptr, data, end_stream, FilterIterationStartState::CanStartFromCurrent);
       },
-      [this, body](HeaderMapPtr&& headers, Code& code) -> std::string {
+      [this](HeaderMapPtr&& headers, Code& code, absl::string_view& body_text) -> std::string {
         connection_manager_.config_.localReply()->matchAndRewrite(
-          request_headers_.get(), response_headers_.get(), response_trailers_.get(), stream_info_, code);
+            request_headers_.get(), response_headers_.get(), response_trailers_.get(), stream_info_,
+            code);
         std::string formatted_body = connection_manager_.config_.localReply()->format(
-          request_headers_.get(), response_headers_.get(), response_trailers_.get(), stream_info_, body);
-          
-        connection_manager_.config_.localReply()->insertContentHeaders(formatted_body, headers.get());
+            request_headers_.get(), response_headers_.get(), response_trailers_.get(), stream_info_,
+            body_text);
+
+        connection_manager_.config_.localReply()->insertContentHeaders(formatted_body,
+                                                                       headers.get());
         return formatted_body;
       },
       state_.destroyed_, code, body, grpc_status, is_head_request);
@@ -2311,14 +2314,18 @@ void ConnectionManagerImpl::ActiveStreamEncoderFilter::responseDataTooLarge() {
             parent_.response_encoder_->encodeData(data, end_stream);
             parent_.state_.local_complete_ = end_stream;
           },
-          [&](HeaderMapPtr&& headers, Code& code) -> std::string {
+          [&](HeaderMapPtr&& headers, Code& code, absl::string_view& body_text) -> std::string {
             parent_.connection_manager_.config_.localReply()->matchAndRewrite(
-              parent_.request_headers_.get(), parent_.response_headers_.get(), parent_.response_trailers_.get(), parent_.stream_info_, code);
+                parent_.request_headers_.get(), parent_.response_headers_.get(),
+                parent_.response_trailers_.get(), parent_.stream_info_, code);
             std::string formatted_body = parent_.connection_manager_.config_.localReply()->format(
-              parent_.request_headers_.get(), parent_.response_headers_.get(), parent_.response_trailers_.get(), parent_.stream_info_, CodeUtility::toString(Http::Code::InternalServerError));
-            
-            parent_.connection_manager_.config_.localReply()->insertContentHeaders(formatted_body, headers.get());
-          return formatted_body;
+                parent_.request_headers_.get(), parent_.response_headers_.get(),
+                parent_.response_trailers_.get(), parent_.stream_info_,
+                body_text);
+
+            parent_.connection_manager_.config_.localReply()->insertContentHeaders(formatted_body,
+                                                                                   headers.get());
+            return formatted_body;
           },
           parent_.state_.destroyed_, Http::Code::InternalServerError,
           CodeUtility::toString(Http::Code::InternalServerError), absl::nullopt,

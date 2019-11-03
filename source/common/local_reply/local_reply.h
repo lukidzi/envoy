@@ -38,18 +38,17 @@ private:
 
 using ResponseMapperPtr = std::unique_ptr<ResponseMapper>;
 
-
 class LocalReply {
 public:
   LocalReply(std::list<ResponseMapperPtr> mappers, AccessLog::FormatterPtr&& formatter,
              std::string content_type);
 
-/**
- * Run through defined in configuration filters and for first matched filter rewrite status code.
- * @param request_headers supplies the information about request headers required by filters
- * @param stream_info supplies the information about streams required by filters.
- * @param code status code which will be rewrited
- */
+  /**
+   * Run through defined in configuration filters and for first matched filter rewrite status code.
+   * @param request_headers supplies the information about request headers required by filters
+   * @param stream_info supplies the information about streams required by filters.
+   * @param code status code which will be rewrited
+   */
   void matchAndRewrite(const Http::HeaderMap* request_headers,
                        const Http::HeaderMap* response_headers,
                        const Http::HeaderMap* response_trailers,
