@@ -15,7 +15,7 @@ DEFINE_PROTO_FUZZER(const test::common::access_log::TestCase& input) {
     for (const auto& it : formatters) {
       it->format(
           Fuzz::fromHeaders(input.request_headers()), Fuzz::fromHeaders(input.response_headers()),
-          Fuzz::fromHeaders(input.response_trailers()), Fuzz::fromStreamInfo(input.stream_info()));
+          Fuzz::fromHeaders(input.response_trailers()), Fuzz::fromStreamInfo(input.stream_info()), std::string{});
     }
     ENVOY_LOG_MISC(trace, "Success");
   } catch (const EnvoyException& e) {

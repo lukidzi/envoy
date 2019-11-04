@@ -98,9 +98,7 @@ AccessLog::FormatterPtr createFormatter(const Protobuf::Message& config,
 
 std::string getContentType(
     const envoy::config::filter::network::http_connection_manager::v2::LocalReplyConfig& config) {
-  if (!config.has_format()) {
-    return Http::Headers::get().ContentTypeValues.Text;
-  } else if (config.format().format_case() == envoy::type::StringOrJson::kJsonFormat) {
+  if (config.has_format() && config.format().format_case() == envoy::type::StringOrJson::kJsonFormat) {
     return Http::Headers::get().ContentTypeValues.Json;
   } else {
     return Http::Headers::get().ContentTypeValues.Text;
@@ -435,9 +433,8 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
   }
 
   // local_reply
-  if (config.has_local_reply_config()) {
     std::list<LocalReply::ResponseMapperPtr> mappers;
-    if (!config.local_reply_config().mapper().empty()) {
+    if ( config.has_local_reply_config() && !config.local_reply_config().mapper().empty()) {
 
       for (auto& mapper : config.local_reply_config().mapper()) {
         if (mapper.has_filter() && mapper.has_rewriter()) {
@@ -458,7 +455,6 @@ HttpConnectionManagerConfig::HttpConnectionManagerConfig(
     local_reply_ = std::make_unique<LocalReply::LocalReply>(LocalReply::LocalReply{
         std::move(mappers), createFormatter(config.local_reply_config(), context),
         getContentType(config.local_reply_config())});
-  }
 }
 
 void HttpConnectionManagerConfig::processFilter(
